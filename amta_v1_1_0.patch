@@ -1,0 +1,305 @@
+diff -ruN amta_original/AMTA_SYSTEM.md amta_v1_1_0/AMTA_SYSTEM.md
+--- amta_original/AMTA_SYSTEM.md	2026-06-13 18:40:16.408731191 +0000
++++ amta_v1_1_0/AMTA_SYSTEM.md	2026-06-13 18:40:12.329138153 +0000
+@@ -1,7 +1,7 @@
+ # AMTA — Fuente Única de Verdad para Agentes
+ 
+-> **Versión:** 1.0.0  
+-> **Última actualización:** 2025-06-13  
++> **Versión:** 1.1.0  
++> **Última actualización:** 2026-06-13  
+ > **Naturaleza:** Contrato de comportamiento. Agnóstico a dominio, lenguaje y tipo de proyecto.
+ 
+ ---
+@@ -63,6 +63,38 @@
+ 
+ ---
+ 
++### Nivel 1.1 — Taxonomía Ontológica
++
++AMTA almacena dos categorías de conocimiento.
++
++#### FACTUAL
++
++Describe la realidad observable del proyecto.
++
++| Tipo | Pregunta que responde |
++|---|---|
++| `Entidad` | ¿Qué existe? |
++| `Evento` | ¿Qué ocurrió? |
++| `Artefacto` | ¿Qué se construyó? |
++
++#### EPISTÉMICO
++
++Describe el conocimiento y razonamiento del equipo.
++
++| Tipo | Pregunta que responde |
++|---|---|
++| `Decision` | ¿Qué elegimos? |
++| `Descarte` | ¿Qué rechazamos? |
++| `Hipotesis` | ¿Qué creemos? |
++
++AMTA almacena hechos y conocimiento del equipo.
++
++Las tareas viven en sistemas transaccionales.
++
++Las opiniones se convierten en nodos únicamente cuando adquieren evidencia (`Hipotesis`) o compromiso explícito (`Decision`).
++
++---
++
+ ### Nivel 2 — Estructura de Archivos (Portable)
+ 
+ ```
+@@ -95,7 +127,8 @@
+ ```yaml
+ ---
+ id: uuid_generado
+-type: Decision | Evento | Entidad | Artefacto | Descarte
++type: Decision | Evento | Entidad | Artefacto | Descarte | Hipotesis
++priority: critical | important | normal
+ status: active | deprecated | archived | disputed
+ created: 2025-06-13T10:00:00Z
+ updated: 2025-06-13T15:30:00Z
+@@ -111,7 +144,7 @@
+ 
+ # Título del nodo
+ 
+-Descripción concisa del hecho, decisión, entidad o descarte.
++Descripción concisa del hecho, decisión, entidad, artefacto, descarte o hipótesis.
+ ```
+ 
+ ---
+@@ -157,15 +190,61 @@
+ 
+ Crea un nodo `Descarte` cada vez que el equipo evalúe una opción y elija otra. Esto previene que futuros agentes repitan evaluaciones ya realizadas.
+ 
++
++---
++
++### Nivel 2.4 — Nodo Tipo Hipotesis
++
++El nodo `Hipotesis` captura una afirmación prospectiva bajo evaluación.
++
++Una hipótesis describe una creencia verificable mediante evidencia. Una hipótesis sin evidencia es una opinión y permanece fuera del grafo.
++
++```yaml
++---
++id: uuid_generado
++type: Hipotesis
++status: active | validated | refuted | superseded
++priority: critical | important | normal
++created: 2026-06-13T10:00:00Z
++updated: 2026-06-13T10:00:00Z
++evidence:
++  - type: metric | event | artifact | human_validation
++    reference: uuid_o_referencia_externa
++    description: "Métrica, hecho o artefacto que confirma o refuta la hipótesis"
++edges_out:
++  - relation: "relacionada_con"
++    target: uuid_relacionado
++---
++
++# Hipótesis: [nombre]
++
++Afirmación bajo evaluación y criterio observable para validarla o refutarla.
++```
++
++**Ciclo de vida de `Hipotesis`:**
++
++| Status | Significado | Acción requerida |
++|---|---|---|
++| `active` | Bajo evaluación | Mantener evidencia actualizada |
++| `validated` | Confirmada por evidencia | Registrar evidencia suficiente |
++| `refuted` | Refutada por evidencia | Registrar evidencia que la refuta |
++| `superseded` | Reemplazada por hipótesis más precisa | Completar `superseded_by` |
++
++Una hipótesis refutada permanece como `Hipotesis` con `status: refuted`.
++
++Una hipótesis refutada no se convierte en `Descarte`.
++
++La refutación proviene de evidencia. El descarte proviene de evaluación deliberada entre alternativas.
++
+ ---
+ 
+-### Nivel 2.4 — Versionado del Grafo
++### Nivel 2.5 — Versionado del Grafo
+ 
+ El archivo `STATE.md` incluye siempre:
+ 
+ ```yaml
+-graph_version: 1.0.0
+-last_updated: 2025-06-13T15:00:00Z
++graph_version: 1.1.0
++last_updated: 2026-06-13T15:00:00Z
+ conflict_window_seconds: 60   # ajustar según latencia del sistema
+ ```
+ 
+@@ -174,7 +253,7 @@
+ | Incremento | Cuándo |
+ |---|---|
+ | **Major** (1.x.x → 2.0.0) | Cambio estructural del grafo (nuevos tipos, nuevo esquema) |
+-| **Minor** (1.0.x → 1.1.0) | Nodo nuevo incorporado |
++| **Minor** (1.0.x → 1.1.0) | Nuevo tipo, campo o regla compatible incorporada |
+ | **Patch** (1.0.0 → 1.0.1) | Actualización de nodo existente |
+ 
+ Actualiza `graph_version` en `STATE.md` después de cada escritura al grafo.
+@@ -199,6 +278,7 @@
+ | "¿Qué relación tiene [A] con [B]?" | Carga ambos nodos. Expande aristas hasta profundidad 2. |
+ | "¿Qué cambió recientemente?" | Carga nodos en `Daily/` de los últimos 2 días. |
+ | "Actualiza [entidad] con [nuevo estado]" | Ejecuta `amta_write`. Lee el nodo actual primero. |
++| "¿Qué es lo más importante ahora?" | Carga nodos `active` con `priority: critical`. |
+ | Consulta sin entidades específicas | Carga solo `SYSTEM.md`. |
+ 
+ #### Después de cualquier cambio:
+@@ -262,7 +342,7 @@
+ Toda escritura via `amta_write` genera automáticamente:
+ - Timestamp `updated` en el nodo modificado.
+ - Entrada en `CHANGELOG.md`.
+-- Incremento de `patch` en `graph_version` dentro de `STATE.md`.
++- Incremento de `patch` en `graph_version` dentro de `STATE.md`, salvo cambios estructurales que incrementan `minor` o `major`.
+ - Actualización de `last_updated` en `STATE.md`.
+ 
+ `amta_write` trata `STATE.md` como destino de escritura obligatorio en cada operación — no solo los nodos en `graph/nodes/`.
+diff -ruN amta_original/CHANGELOG.md amta_v1_1_0/CHANGELOG.md
+--- amta_original/CHANGELOG.md	2026-06-13 18:40:16.410208618 +0000
++++ amta_v1_1_0/CHANGELOG.md	2026-06-13 18:40:12.332120280 +0000
+@@ -2,7 +2,7 @@
+ 
+ > Registra aquí todo cambio significativo al grafo o al proyecto.  
+ > Formato: `[graph_version] YYYY-MM-DD — Tipo — Descripción`  
+-> Tipos: `nodo_nuevo` | `nodo_actualizado` | `nodo_deprecado` | `conflicto_resuelto` | `cambio_estructural`
++> Tipos: `nodo_nuevo` | `nodo_actualizado` | `nodo_deprecado` | `conflicto_resuelto` | `cambio_estructural` | `spec_actualizada`
+ 
+ ---
+ 
+@@ -22,6 +22,14 @@
+ 
+ ## Registro
+ 
++### [1.1.0] 2026-06-13
++
++### cambio_estructural
++- Se incorpora `Hipotesis` como tipo de nodo epistémico.
++- Se incorpora `priority: critical | important | normal` como campo transversal.
++- Se formaliza la taxonomía ontológica FACTUAL / EPISTÉMICO.
++- Se actualiza la tabla de enrutamiento para cargar nodos críticos activos.
++
+ ### [0.1.0] YYYY-MM-DD
+ 
+ ### cambio_estructural
+diff -ruN amta_original/EJEMPLO_hipotesis.md amta_v1_1_0/EJEMPLO_hipotesis.md
+--- amta_original/EJEMPLO_hipotesis.md	1970-01-01 00:00:00.000000000 +0000
++++ amta_v1_1_0/EJEMPLO_hipotesis.md	2026-06-13 18:40:12.332875326 +0000
+@@ -0,0 +1,29 @@
++---
++id: d4e5f6a7-b8c9-4d0e-9f1a-2b3c4d5e6f7a
++type: Hipotesis
++status: active
++priority: important
++created: 2026-06-13T10:00:00Z
++updated: 2026-06-13T10:00:00Z
++evidence:
++  - type: metric
++    reference: "baseline_operativo"
++    description: "Métrica inicial requerida antes de validar o refutar la hipótesis"
++edges_out:
++  - relation: "relacionada_con"
++    target: a3f9c2d1-b4e2-4f1a-9c3d-e5f6a7b8c9d0
++---
++
++# Hipótesis: La automatización reduce retrabajo operativo
++
++Creemos que incorporar una fuente única de verdad reducirá preguntas repetidas y retrabajo entre agentes.
++
++## Criterio de validación
++
++Validar si un agente nuevo puede reconstruir el estado del proyecto leyendo `STATE.md` y los nodos críticos activos sin revisar conversaciones antiguas.
++
++## Evidencia requerida
++
++- Registro de una sesión nueva con agente externo.
++- Comparación entre preguntas repetidas antes y después de AMTA.
++- Resultado documentado en un nodo `Evento` o `Artefacto`.
+diff -ruN amta_original/EJEMPLO_nodo.md amta_v1_1_0/EJEMPLO_nodo.md
+--- amta_original/EJEMPLO_nodo.md	2026-06-13 18:40:16.410649772 +0000
++++ amta_v1_1_0/EJEMPLO_nodo.md	2026-06-13 18:40:12.332644440 +0000
+@@ -2,6 +2,7 @@
+ id: a3f9c2d1-b4e2-4f1a-9c3d-e5f6a7b8c9d0
+ type: Decision
+ status: active
++priority: important
+ created: 2025-06-13T10:00:00Z
+ updated: 2025-06-13T10:00:00Z
+ superseded_by:          # completar solo si status = deprecated
+diff -ruN amta_original/README.md amta_v1_1_0/README.md
+--- amta_original/README.md	2026-06-13 18:40:16.409311042 +0000
++++ amta_v1_1_0/README.md	2026-06-13 18:40:12.330563824 +0000
+@@ -15,6 +15,7 @@
+     nodes/
+       EJEMPLO_nodo.md        ← Eliminar después de leer
+       EJEMPLO_descarte.md    ← Eliminar después de leer
++      EJEMPLO_hipotesis.md   ← Eliminar después de leer
+ ```
+ 
+ ---
+@@ -30,7 +31,7 @@
+ 
+ ### Paso 2 — Crea tu primer nodo real
+ 
+-Copia `EJEMPLO_nodo.md`, renómbralo con un UUID nuevo y describe la primera decisión o entidad del proyecto.
++Copia `EJEMPLO_nodo.md`, renómbralo con un UUID nuevo y describe la primera decisión, entidad, artefacto, evento, descarte o hipótesis del proyecto.
+ 
+ Genera un UUID en bash:
+ ```bash
+@@ -56,6 +57,8 @@
+ 4. Escribe el nodo actualizado.
+ 5. Registra en `CHANGELOG.md`.
+ 
++Para consultas globales, carga primero nodos `active` con `priority: critical`.
++
+ ---
+ 
+ ## Tipos de nodo disponibles
+@@ -67,6 +70,7 @@
+ | `Entidad` | Concepto del dominio (usuario, sistema, servicio) |
+ | `Artefacto` | Documento, código, diagrama o entregable |
+ | `Descarte` | Opción evaluada y descartada — incluye `reason` |
++| `Hipotesis` | Creencia verificable bajo evaluación — incluye `evidence` |
+ 
+ ---
+ 
+diff -ruN amta_original/STATE.md amta_v1_1_0/STATE.md
+--- amta_original/STATE.md	2026-06-13 18:40:16.409854942 +0000
++++ amta_v1_1_0/STATE.md	2026-06-13 18:40:12.331323606 +0000
+@@ -1,6 +1,6 @@
+ ---
+-graph_version: 0.1.0
+-last_updated: YYYY-MM-DDTHH:MM:SSZ
++graph_version: 1.1.0
++last_updated: 2026-06-13T00:00:00Z
+ conflict_window_seconds: 60
+ ---
+ 
+@@ -34,9 +34,9 @@
+ 
+ Lista los 5–10 nodos más relevantes del dominio. Actualiza esta tabla cuando agregues nodos estructurales.
+ 
+-| UUID | Tipo | Nombre | Status |
+-|---|---|---|---|
+-| — | — | — | — |
++| UUID | Tipo | Nombre | Status | Priority |
++|---|---|---|---|---|
++| — | — | — | — | — |
+ 
+ ---
+ 
+@@ -59,3 +59,9 @@
+ ## Notas de Contexto
+ 
+ [Cualquier información relevante que un agente nuevo deba conocer antes de actuar en este proyecto.]
++
++## Hipótesis Activas
++
++| UUID | Hipótesis | Priority | Evidencia actual | Status |
++|---|---|---|---|---|
++| — | — | — | — | — |

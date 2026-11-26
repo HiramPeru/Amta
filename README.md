@@ -1,5 +1,7 @@
 # AMTA Starter Kit
 
+> **Scope Note (English):** This repository is the zero-dependency Markdown starter template and behavioral contract for AMTA project memory (`0` automated tests). For the executable Python 3.12 CLI validator, deterministic graph builder, JSON Schema exporter, and automated pytest suite (`59` tests, `91%` coverage), see **[HiramPeru/amta-core](https://github.com/HiramPeru/amta-core)**.
+
 Copia esta carpeta a la raíz de cualquier proyecto. El grafo arranca en 5 minutos.
 
 ---
